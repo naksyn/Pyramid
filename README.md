@@ -11,7 +11,7 @@ This can be achieved because:
  3. There is a lack of auditing for Python code execution - [PEP-578](https://peps.python.org/pep-0578/) tried to solve that but the stock python.exe binary does not have auditing capabilities enabled by default.
  4. Operations can be done natively from within python.exe natively using Python language to perform post exploitation tasks such as dynamically importing Python modules to run offensive tools and executing Beacon Object Files (after some BOF modifications) directly within python.exe.
  
-For more information please check the DEFCON30 - Adversary village talk "Python vs Modern Defenses". 
+For more information please check the **[DEFCON30 - Adversary village talk "Python vs Modern Defenses" slide deck](https://github.com/naksyn/talks/blob/main/DEFCON30/Diego%20Capriotti%20-%20DEFCON30%20Adversary%20Village%20-%20%20Python%20vs%20Modern%20Defenses.pdf)** and this **[post on my blog](https://www.naksyn.com/edr%20evasion/2022/09/01/operating-into-EDRs-blindspot.html)**. 
 
 ## Disclaimer
 
