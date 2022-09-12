@@ -31,6 +31,10 @@ Pyramid is using some awesome tools made by:
 
  - [S4ntiagoP](https://twitter.com/s4ntiago_p) for [nanodump](https://github.com/helpsystems/nanodump)
 
+  
+### Contributors
+
+[snovvcrash](https://twitter.com/snovvcrash) - base-DonPAPI.py
 
 ### Current features
 
@@ -58,9 +62,10 @@ The Python dependencies have been already fixed and modified to be imported in m
 
 There are currently 4 main base scripts available:
  1. **base-bh.py** script will in-memory import and execute python-BloodHound.
- 2. **base-secretsdump.py** script will in-memory import and execute Impacket secretsdump.
+ 2. **base-secretsdump.py** script will in-memory import and execute [Impacket](https://github.com/SecureAuthCorp/impacket) secretsdump.
  3. **base-BOF-lsass.py** script is using a stripped version of nanodump to dump lsass from python.exe. This is achieved in-memory injecting shellcode output obtained from bof2shellcode and COFFloader. To make complex BOFs work with this technique, they should first be adapted for Python execution.
  4. **base-tunnel-inj.py** script import and executes paramiko on a new Thread to create an SSH local port forward to a remote SSH server. Afterward a shellcode can be locally injected in python.exe.
+ 5. **base DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI).
 
 ### Usage
 
@@ -105,6 +110,10 @@ Then paste it into the base script within the shellcode variable.
 ##### base-tunnel-inj.py
 
 Insert SSH server, local port forward details details and HTTPS credentials in the upper part of the script and modify the sc variable using your preferred shellcode stager. Remember to tunnel your traffic using SSH local port forward, so the stager should have 127.0.0.1 as C2 server and the SSH listening port as the C2 port.
+
+##### base-DonPAPI.py
+
+Insert AD details and HTTPS credentials in the upper part of the script.
 
 
 #### Unzip embeddable package and execute the download cradle on target
