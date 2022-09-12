@@ -65,7 +65,7 @@ There are currently 4 main base scripts available:
  2. **base-secretsdump.py** script will in-memory import and execute [Impacket](https://github.com/SecureAuthCorp/impacket) secretsdump.
  3. **base-BOF-lsass.py** script is using a stripped version of nanodump to dump lsass from python.exe. This is achieved in-memory injecting shellcode output obtained from bof2shellcode and COFFloader. To make complex BOFs work with this technique, they should first be adapted for Python execution.
  4. **base-tunnel-inj.py** script import and executes paramiko on a new Thread to create an SSH local port forward to a remote SSH server. Afterward a shellcode can be locally injected in python.exe.
- 5. **base DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI).
+ 5. **base DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
 
 ### Usage
 
@@ -141,7 +141,7 @@ The downloaded python "base" script will in-memory import the dependencies and e
 #### Limitations
 
 Dynamically loading Python modules does not natively support importing *.pyd files that are essentially dlls. The only public solution to my knowledge that solves this problem is provided by Scythe *(in-memory-execution) by re-engineering the CPython interpreter. In ordrer not to lose the digital signature, one solution that would allow using the native Python embeddable package involves dropping on disk the required pyd files or wheels. This should not have significant OPSEC implications in most cases, however bear in mind that the following wheels containing pyd files are dropped on disk to allow Dinamic loading to complete:
- *. Cryptodome - needed by Bloodhound-Python and Impacket
+ *. Cryptodome - needed by Bloodhound-Python, Impacket and DonPAPI
  *. bcrypt, cryptography, nacl, cffi - needed by paramiko
 
  - please note that running BOFs does not need dropping any pyd on disk since this techniques only involves shellcode injection.
