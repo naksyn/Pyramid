@@ -11,7 +11,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTH
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-This script also contains an adaptation of https://github.com/login-securite/DonPAPI/blob/main/DonPAPI.py
+This script also contains an adaptation of https://github.com/AlessandroZ/LaZagne/blob/master/Windows/laZagne.py
 '''
 
 import os
@@ -28,7 +28,7 @@ import ctypes
 import inspect #to test modules
 
 ###### CHANGE THIS ##########
-pyramid_server = '10.147.20.187'
+pyramid_server = '192.168.1.1'
 pyramid_port = '443'
 pyramid_user = 'testuser'
 pyramid_pass = 'Sup3rP4ss!'
