@@ -34,13 +34,13 @@ Pyramid is using some awesome tools made by:
   
 ### Contributors
 
-[snovvcrash](https://twitter.com/snovvcrash) - base-DonPAPI.py
+[snovvcrash](https://twitter.com/snovvcrash) - base-DonPAPI.py - base-LaZagne.py
 
 ### Current features
 
 Pyramid capabilities are executed directly from python.exe process and are currently:
 
- 1. Dynamic loading of BloodHound Python, impacket secretsdump and paramiko.
+ 1. Dynamic loading of BloodHound Python, impacket secretsdump, paramiko, DonPAPI and LaZagne.
  2. BOFs execution using in-process shellcode injection.
  3. In-process injection of a C2 agent and tunneling its traffic with local SSH port forwarding.
 
@@ -65,7 +65,8 @@ There are currently 4 main base scripts available:
  2. **base-secretsdump.py** script will in-memory import and execute [Impacket](https://github.com/SecureAuthCorp/impacket) secretsdump.
  3. **base-BOF-lsass.py** script is using a stripped version of nanodump to dump lsass from python.exe. This is achieved in-memory injecting shellcode output obtained from bof2shellcode and COFFloader. To make complex BOFs work with this technique, they should first be adapted for Python execution.
  4. **base-tunnel-inj.py** script import and executes paramiko on a new Thread to create an SSH local port forward to a remote SSH server. Afterward a shellcode can be locally injected in python.exe.
- 5. **base DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
+ 5. **base-DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
+ 6. **base-LaZagne.py** script will in-memory import and execute [LaZagne](https://github.com/AlessandroZ/LaZagne)
 
 ### Usage
 
@@ -115,6 +116,10 @@ Insert SSH server, local port forward details details and HTTPS credentials in t
 
 Insert AD details and HTTPS credentials in the upper part of the script.
 
+##### base-LaZagne.py
+
+Insert and HTTPS credentials in the upper part of the script and change lazagne module if needed.
+
 
 #### Unzip embeddable package and execute the download cradle on target
 
@@ -143,7 +148,7 @@ The downloaded python "base" script will in-memory import the dependencies and e
 #### Limitations
 
 Dynamically loading Python modules does not natively support importing *.pyd files that are essentially dlls. The only public solution to my knowledge that solves this problem is provided by Scythe *(in-memory-execution) by re-engineering the CPython interpreter. In ordrer not to lose the digital signature, one solution that would allow using the native Python embeddable package involves dropping on disk the required pyd files or wheels. This should not have significant OPSEC implications in most cases, however bear in mind that the following wheels containing pyd files are dropped on disk to allow Dinamic loading to complete:
- *. Cryptodome - needed by Bloodhound-Python, Impacket and DonPAPI
+ *. Cryptodome - needed by Bloodhound-Python, Impacket, DonPAPI and LaZagne
  *. bcrypt, cryptography, nacl, cffi - needed by paramiko
 
  - please note that running BOFs does not need dropping any pyd on disk since this techniques only involves shellcode injection.
