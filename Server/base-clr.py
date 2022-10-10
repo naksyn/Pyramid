@@ -27,13 +27,9 @@ import zipfile
 import urllib.request
 import sys
 import io
-import time
-import logging
-import ctypes
-import inspect #to test modules
 
 ###### CHANGE THIS ##########
-pyramid_server = '192.168.1.80'
+pyramid_server = '192.168.1.1'
 pyramid_port = '443'
 pyramid_user = 'testuser'
 pyramid_pass = 'Sup3rP4ss!'
