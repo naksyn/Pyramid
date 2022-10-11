@@ -60,7 +60,7 @@ BOFs are ran through a base script containing the shellcode resulted from bof2sh
 
 The Python dependencies have been already fixed and modified to be imported in memory without conflicting.
 
-There are currently 4 main base scripts available:
+There are currently 8 main base scripts available:
  1. **base-bh.py** script will in-memory import and execute python-BloodHound.
  2. **base-secretsdump.py** script will in-memory import and execute [Impacket](https://github.com/SecureAuthCorp/impacket) secretsdump.
  3. **base-BOF-lsass.py** script is using a stripped version of nanodump to dump lsass from python.exe. This is achieved in-memory injecting shellcode output obtained from bof2shellcode and COFFloader. To make complex BOFs work with this technique, they should first be adapted for Python execution.
@@ -68,6 +68,9 @@ There are currently 4 main base scripts available:
  5. **base-DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
  6. **base-LaZagne.py** script will in-memory import and execute [LaZagne](https://github.com/AlessandroZ/LaZagne)
  7. **base-tunnel-socks5** script import and executes paramiko on a new Thread to create an SSH remote port forward to an SSH server, then a socks5 proxy server is executed locally on target and made accessible remotely through the SSH tunnel. 
+ 8.  **base-clr** script imports Pythonnet to load and execute a .NET assembly in-memory.
+
+
 ### Usage
 
 
