@@ -423,7 +423,7 @@ if __name__ == '__main__':
 
     args = [lazagne_module]
     if lazagne_verbosity:
-    	args += lazagne_verbosity
+    	args += [lazagne_verbosity]
     args = dict(parser.parse_args(args)._get_kwargs())
     arguments = parser.parse_args()
 
