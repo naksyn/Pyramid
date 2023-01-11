@@ -73,8 +73,8 @@ LISTENING_SOCKS_ADDRESS_PORT="http+socks4+socks5://127.0.0.1:" + DEFAULT_FW_PORT
 
 ####################
 
-cwd = os.path.dirname(__file__)
-#os.getcwd()
+#cwd = os.path.dirname(__file__)
+cwd=os.getcwd()
 
 fileName='paramiko_pyds_dependencies.zip'
 print("[*] Downloading and unpacking on disk pyds dependencies : " + fileName)
