@@ -66,6 +66,7 @@ SSH_remotefw =("127.0.0.1",int(DEFAULT_FW_PORT)) # ADDRESS AND PORT TO FORWARD A
 SSH_username = "changeme"
 SSH_password = "changeme"
 SSH_PORT=22
+SSH_KEEPALIVE_INTERVAL=15
 
 # SOCKS PARAMS
 
@@ -312,6 +313,7 @@ def handler(chan, host, port):
 
 def reverse_forward_tunnel(server_port, remote_host, remote_port, transport):
     transport.request_port_forward("", server_port)
+    transport.set_keepalive(SSH_KEEPALIVE_INTERVAL)
     while True:
         chan = transport.accept(20000)
         if chan is None:
