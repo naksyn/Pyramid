@@ -61,7 +61,7 @@ BOFs are ran through a base script containing the shellcode resulted from bof2sh
 
 The Python dependencies have been already fixed and modified to be imported in memory without conflicting.
 
-There are currently 8 main base scripts available:
+There are currently 9 main base scripts available:
  1. **base-bh.py** script will in-memory import and execute python-BloodHound.
  2. **base-secretsdump.py** script will in-memory import and execute [Impacket](https://github.com/SecureAuthCorp/impacket) secretsdump.
  3. **base-BOF-lsass.py** script is using a stripped version of nanodump to dump lsass from python.exe. This is achieved in-memory injecting shellcode output obtained from bof2shellcode and COFFloader. To make complex BOFs work with this technique, they should first be adapted for Python execution.
