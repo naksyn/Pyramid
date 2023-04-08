@@ -1,4 +1,4 @@
-![Supported Python versions](https://img.shields.io/badge/python-3.7+-blue.svg) ![Twitter](https://img.shields.io/twitter/follow/naksyn?label=naksyn&style=social)
+![Supported Python versions](https://img.shields.io/badge/python-3.7+-blue.svg) [![Twitter](https://img.shields.io/twitter/follow/naksyn?label=naksyn&style=social)](https://twitter.com/intent/follow?screen_name=naksyn)
 
 # Pyramid
 
