@@ -298,7 +298,7 @@ if __name__ == '__main__':
 
 	options = parser.parse_args()
 	
-	pyramid_params = {'pyramid_server=':'\'' + options.server + '\'',
+	pyramid_params = {'pyramid_server=':'\'' + (options.server if options.server else '') + '\'',
 					  'pyramid_port=':'\'' + str(options.port) + '\'',
 					  'pyramid_user=':'\'' + options.user + '\'',
 					  'pyramid_pass=':'\'' + options.password + '\'',
