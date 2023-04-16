@@ -31,7 +31,9 @@ import io
 import time
 import logging
 import ctypes
-import### AUTO-GENERATED PYRAMID CONFIG ### DELIMITER
+import inspect
+
+### AUTO-GENERATED PYRAMID CONFIG ### DELIMITER
 
 pyramid_server='192.168.1.2'
 pyramid_port='80'
