@@ -281,12 +281,12 @@ if __name__ == '__main__':
 	parser.add_argument('-sslkey', help=f'SSL key file full path (default: {default_sslkey})', default=default_sslkey)
 	parser.add_argument('-sslcert', help=f'SSL certificate file full path (default: {default_sslcert})', default=default_sslcert)
 	parser.add_argument('-filesfolder', help=f'Pyramid Server folder (default: {default_filesfolder})', default=default_filesfolder)
-	parser.add_argument('-enc', choices=['xor', 'chacha20'], help='Apply encryption to delivered files and decrypt URLs. XOR and modified chacha schemes are available')
+	parser.add_argument('-enc', choices=['xor', 'chacha20'], help='Apply encryption to delivered files and decrypt URLs. XOR and modified chacha schemes are available', required=True)
 	parser.add_argument('-generate', action='store_true', help='Generate Pyramid Server configs for modules automatically based on command line given')
 	group = parser.add_mutually_exclusive_group(required='-enc' in sys.argv)
 	group.add_argument('-passenc', help='Encryption password')
 	
-	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 443 -ssl'
+	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 443 -ssl -enc chacha20 -passenc superpass -generate -server 192.168.1.1'
 	parser.epilog = example_usage
 
 	
