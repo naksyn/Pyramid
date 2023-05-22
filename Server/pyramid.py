@@ -35,24 +35,32 @@ forbidden_chars = ["../", "~", "`", "&", "|", ";", "$", "{", "}", "[", "]", "(",
 begin_delim="### AUTO-GENERATED PYRAMID CONFIG ### DELIMITER"
 end_delim="### END DELIMITER"
 
-def replace_in_file(pyramid_params,filename, directory):
-	with open(os.path.join(directory, filename), 'r+') as file:
-		content = file.read()
-		replace_text=begin_delim + '\n\n'
-		for key in pyramid_params:
-			replace_text += key+pyramid_params[key]+'\n'
-		replace_text += '\n' + end_delim
-		begin_index = content.find(begin_delim)
-		end_index = content.find(end_delim)
-		if begin_index != -1 and end_index != -1 and begin_index < end_index:
-			toberemoved_text = content[begin_index + len(begin_delim):end_index] #debugging
-			file.seek(begin_index)
-			file.write(replace_text)
-			file.write(content[end_index + len(end_delim):])
-			print(Fore.YELLOW + "[+] Text between delimiters removed and replaced on file {}".format(filename) + Style.RESET_ALL)
-		else:
-			print(Fore.YELLOW + "[!] Delimiters not found in the file {} - might be OK if Pyramid config are not needed for it".format(filename) + Style.RESET_ALL)
-						
+def move_cursor_newlines(file, lines):
+    for _ in range(lines):
+        next(file, None)
+
+def replace_in_file(pyramid_params, filename, directory):
+    filepath = os.path.join(directory, filename)
+    with open(filepath, 'r') as file:
+        content = file.read()
+
+    replace_text = begin_delim + '\n\n'
+    for key in pyramid_params:
+        replace_text += key + pyramid_params[key] + '\n'
+    replace_text += '\n' + end_delim
+
+    begin_index = content.find(begin_delim)
+    end_index = content.find(end_delim)
+
+    if begin_index != -1 and end_index != -1 and begin_index < end_index:
+        toberemoved_text = content[begin_index + len(begin_delim):end_index]  # kept for debugging
+        new_content = content[:begin_index] + replace_text + content[end_index + len(end_delim):]
+        with open(filepath, 'w') as file:
+            file.write(new_content)
+        print(Fore.YELLOW + "[+] Text between delimiters removed and replaced on file {}".format(filename) + Style.RESET_ALL)
+    else:
+        print(Fore.YELLOW + "[!] Delimiters not found in the file {} - might be OK if Pyramid config are not needed for it".format(filename) + Style.RESET_ALL)
+					
 
 def substitute_parameters(pyramid_params):
 	modules_dir = os.getcwd() + '/Modules'
@@ -292,6 +300,7 @@ if __name__ == '__main__':
 	parser.add_argument('-u', '--user', help='HTTP Basic Auth username',required=True)
 	parser.add_argument('-pass', '--password', help='HTTP Basic Auth password',required=True)
 	parser.add_argument('-ssl', action='store_true', help='Enable SSL encryption with default SSL key and certificate')
+	parser.add_argument('-setcradle', type=str, help='Module to be fetched by cradle.py')
 	parser.add_argument('-sslkey', help=f'SSL key file full path (default: {default_sslkey})', default=default_sslkey)
 	parser.add_argument('-sslcert', help=f'SSL certificate file full path (default: {default_sslcert})', default=default_sslcert)
 	parser.add_argument('-filesfolder', help=f'Pyramid Server folder (default: {default_filesfolder})', default=default_filesfolder)
@@ -300,7 +309,7 @@ if __name__ == '__main__':
 	group = parser.add_mutually_exclusive_group(required='-enc' in sys.argv)
 	group.add_argument('-passenc', help='Encryption password')
 	
-	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 443 -ssl -enc chacha20 -passenc superpass -generate -server 192.168.1.1'
+	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 443 -ssl -enc chacha20 -passenc superpass -generate -server 192.168.1.1 -cradle bh.py'
 	parser.epilog = example_usage
 
 	
@@ -320,7 +329,8 @@ if __name__ == '__main__':
 					  'encryptionpass=':'\'' + options.passenc + '\'',
 					  'chacha20IV=':str(iv),
 					  'pyramid_http=':'\'' + ('https' if options.ssl else 'http') + '\'',
-					  'encode_encrypt_url=': '\'' + encode_encrypt_url + '\''}
+					  'encode_encrypt_url=': '\'' + encode_encrypt_url + '\''
+					   }
 					  
 					  
 	
@@ -392,6 +402,9 @@ __________                              .__    .___
 	if options.generate:
 		print(Fore.YELLOW + "[+] Auto-generating Pyramid config for modules and agents" + Style.RESET_ALL)
 		substitute_parameters(pyramid_params)
+		agent_dir = os.path.dirname(os.getcwd()) + '/Agent'
+		pyramid_params.update({'pyramid_module=': '\'' + options.setcradle + '\'' if options.setcradle else '\'\''})
+		replace_in_file(pyramid_params,'cradle.py', agent_dir)
 		print_encoded_cradle()
 	    
 	print(Fore.YELLOW + "[+] Pyramid HTTP Server listening on port "+ Style.RESET_ALL,options.port)
