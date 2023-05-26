@@ -1,9 +1,8 @@
 ![Supported Python versions](https://img.shields.io/badge/python-3.7+-blue.svg) [![Twitter](https://img.shields.io/twitter/follow/naksyn?label=naksyn&style=social)](https://twitter.com/intent/follow?screen_name=naksyn)
 
 # Pyramid
-
 <p align="center">
-  <img width="399" alt="immagine" src="https://user-images.githubusercontent.com/59816245/184261793-b301440e-b006-4a6d-904f-90818ea86cfa.png">
+  <img width="250" alt="immagine" src="https://github.com/naksyn/Pyramid/assets/59816245/c4f25419-b350-42d3-86ad-136f3873edb8">
 </p>
 
 # What is it
@@ -11,7 +10,8 @@
 Pyramid is composed of:
  1. a Python HTTP/S server that can deliver encrypted files (chacha, xor)
  2. Python modules that can load in-memory dependencies of offensive tooling such as Bloodhound-py, secretsdump, LaZagne, Pythonnet, DonPAPI, pythonmemorymodule, paramiko, pproxy.
- 3. Python cradle that can download, decrypt and execute in memory Pyramid modules
+ 3. fixed Python dependencies (zip files) that can be imported in memory
+ 4. Python cradle that can download, decrypt and execute in memory Pyramid modules
 
 # Why is it useful
 
@@ -74,21 +74,20 @@ Modules are specific for the feature you want to use and contain:
 The Python dependencies have been already fixed and modified to be imported in memory without conflicting.
 
 There are currently 8 Pyramid modules available:
- 1. **mod-bh.py**  will in-memory import and execute python-BloodHound.
- 2. **mod-secretsdump.py** will in-memory import and execute [Impacket](https://github.com/SecureAuthCorp/impacket) secretsdump.
- 3. **mod-shellcode.py** is a simple in-memory shellcode injector.
-  4. **mod-DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
- 5. **mod-LaZagne.py** script will in-memory import and execute [LaZagne](https://github.com/AlessandroZ/LaZagne)
- 6. **mod-tunnel-socks5** script import and executes paramiko on a new Thread to create an SSH remote port forward to an SSH server, then a socks5 proxy server is executed locally on target and made accessible remotely through the SSH tunnel. 
- 7. **mod-clr** script imports Pythonnet to load and execute a .NET assembly in-memory.
- 8. **mod-pythonmemorymodule** script import [PythonMemoryModule](https://github.com/rkbennett/PythonMemoryModule) to load a dll from memory.
+ 1. **bh.py**  will in-memory import and execute python-BloodHound.
+ 2. **secretsdump.py** will in-memory import and execute [Impacket](https://github.com/SecureAuthCorp/impacket) secretsdump.
+ 3. **shellcode.py** is a simple in-memory shellcode injector.
+  4. **DonPAPI.py** script will in-memory import and execute [DonPAPI](https://github.com/login-securite/DonPAPI). Results and credentials extracted are saved on disk in the Python Embeddable Package Directory.
+ 5. **LaZagne.py** script will in-memory import and execute [LaZagne](https://github.com/AlessandroZ/LaZagne)
+ 6. **tunnel-socks5** script import and executes paramiko on a new Thread to create an SSH remote port forward to an SSH server, then a socks5 proxy server is executed locally on target and made accessible remotely through the SSH tunnel. 
+ 7. **clr** script imports Pythonnet to load and execute a .NET assembly in-memory.
+ 8. **pythonmemorymodule** script import [PythonMemoryModule](https://github.com/rkbennett/PythonMemoryModule) to load a dll from memory.
 
 
 # Usage
 
 
 #### Starting the server
-
 
 `git clone https://github.com/naksyn/Pyramid`
 
@@ -101,24 +100,31 @@ If you want to use your own signed SSL certificate be sure to:
  2. rename the files with key.pem and cert.pem
  3. place both files into the Server folder.
 
-Example of running Pyramid HTTP Server using SSL certificate providing Basic Authentication, encrypting delivery files using ChaCha and auto-generating server configuration in modules and cradle:
+#### Configuring the module
 
-```python
-python3 pyramid.py -p 443 -ssl -u testuser -pass Sup3rP4ss! -enc "chacha20" -passenc "TestPass1" -server "192.168.1.2" -generate
-```
+As an example, if you want to use pythonmemorymodule with Pyramid, put your payload in the **Delivery_files** folder, then open pythonmemorymodule.py and configure the needed parameters in the top of the script, such as the name of the payload file and the procedure you want to call after the PE has been loaded. 
 
-Upon startup pyramid.py will parse its own folder structure to look for key.pem, cert.pem and will deliver files from Server folder.
-
-#### Modifying module specific config
-
-If you auto-generated the Server configuration in Pyramid modules (using -generate switch on the command line), all that is left to set is the module's specific configuration that must be set manually in the upper part of module you want to execute. In the next Pyramid update this process will be eased by using a global json config.
 
 #### Unzip embeddable package and execute the download cradle on target
 
 Once the Pyramid server is running and the Base script is ready you can set the variable `pyramid_module` in  **Agent/cradle.py** file and execute it on the target. 
 The cradle is built to be run with python standard libraries.
 
-#### Executing Pyramid without visible prompt
+#### Example
+
+Example of running Pyramid HTTP Server using SSL certificate providing Basic Authentication, encrypting delivery files using ChaCha and auto-generating server configuration in modules and printing a pastable cradle for pythonmemorymodule:
+
+```python
+python3 pyramid.py -p 443 -ssl -u testuser -pass Sup3rP4ss! -enc "chacha20" -passenc "TestPass1" -server "192.168.1.2" -generate -setcradle pythonmemorymodule.py
+```
+
+Upon startup pyramid.py will parse its own folder structure to look for key.pem, cert.pem and will deliver files from Server folder.
+
+
+https://github.com/naksyn/Pyramid/assets/59816245/4fbc997e-af2d-4ead-881b-ee108c91d195
+
+
+#### Tip for executing Pyramid without visible prompt
 
 To execute Pyramid without bringing up a visible python.exe prompt you can leverage pythonw.exe that won't open a console window upon execution and is contained in the very same Windows Embeddable Package.
 The following picture illustrate an example usage of pythonw.exe to execute base-tunnel-socks5.py on a remote machine without opening a python.exe console window.
