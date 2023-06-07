@@ -757,5 +757,3 @@ if __name__ == '__main__':
             import traceback
             traceback.print_exc()
         logging.error(e)
-int_exc()
-        logging.error(e)
