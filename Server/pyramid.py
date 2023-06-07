@@ -309,7 +309,7 @@ if __name__ == '__main__':
 	group = parser.add_mutually_exclusive_group(required='-enc' in sys.argv)
 	group.add_argument('-passenc', help='Encryption password')
 	
-	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 443 -ssl -enc chacha20 -passenc superpass -generate -server 192.168.1.1 -cradle bh.py'
+	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 80 -enc chacha20 -passenc superpass -generate -server 192.168.1.1 -setcradle bh.py'
 	parser.epilog = example_usage
 
 	
