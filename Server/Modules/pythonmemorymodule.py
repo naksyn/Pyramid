@@ -359,6 +359,3 @@ except KeyboardInterrupt:
     print("[!] Pressed Ctrl+C - freeing dll " + dll_name)
     dll.free_library()
     pass
-ss
-s
-
