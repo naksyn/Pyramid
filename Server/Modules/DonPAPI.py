@@ -630,7 +630,4 @@ def seatbelt_thread(datas):
 
 if __name__ == "__main__":
 	main()
-	#GetDomainBackupKey : dpapi.py backupkeys credz@DC.local --export
-rt
-t
 
