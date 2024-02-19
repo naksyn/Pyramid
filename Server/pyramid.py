@@ -36,30 +36,30 @@ begin_delim="### AUTO-GENERATED PYRAMID CONFIG ### DELIMITER"
 end_delim="### END DELIMITER"
 
 def move_cursor_newlines(file, lines):
-    for _ in range(lines):
-        next(file, None)
+	for _ in range(lines):
+		next(file, None)
 
 def replace_in_file(pyramid_params, filename, directory):
-    filepath = os.path.join(directory, filename)
-    with open(filepath, 'r') as file:
-        content = file.read()
+	filepath = os.path.join(directory, filename)
+	with open(filepath, 'r') as file:
+		content = file.read()
 
-    replace_text = begin_delim + '\n\n'
-    for key in pyramid_params:
-        replace_text += key + pyramid_params[key] + '\n'
-    replace_text += '\n' + end_delim
+	replace_text = begin_delim + '\n\n'
+	for key in pyramid_params:
+		replace_text += key + pyramid_params[key] + '\n'
+	replace_text += '\n' + end_delim
 
-    begin_index = content.find(begin_delim)
-    end_index = content.find(end_delim)
+	begin_index = content.find(begin_delim)
+	end_index = content.find(end_delim)
 
-    if begin_index != -1 and end_index != -1 and begin_index < end_index:
-        toberemoved_text = content[begin_index + len(begin_delim):end_index]  # kept for debugging
-        new_content = content[:begin_index] + replace_text + content[end_index + len(end_delim):]
-        with open(filepath, 'w') as file:
-            file.write(new_content)
-        print(Fore.YELLOW + "[+] Text between delimiters removed and replaced on file {}".format(filename) + Style.RESET_ALL)
-    else:
-        print(Fore.YELLOW + "[!] Delimiters not found in the file {} - might be OK if Pyramid config are not needed for it".format(filename) + Style.RESET_ALL)
+	if begin_index != -1 and end_index != -1 and begin_index < end_index:
+		toberemoved_text = content[begin_index + len(begin_delim):end_index]  # kept for debugging
+		new_content = content[:begin_index] + replace_text + content[end_index + len(end_delim):]
+		with open(filepath, 'w') as file:
+			file.write(new_content)
+		print(Fore.YELLOW + "[+] Text between delimiters removed and replaced on file {}".format(filename) + Style.RESET_ALL)
+	else:
+		print(Fore.YELLOW + "[!] Delimiters not found in the file {} - might be OK if Pyramid config are not needed for it".format(filename) + Style.RESET_ALL)
 					
 
 def substitute_parameters(pyramid_params):
@@ -108,18 +108,28 @@ class CustomServerHandler(http.server.BaseHTTPRequestHandler):
 			return result
 	
 	def sanitize_path(self,encoded=True):
-	#Sanitize path to prevent directory traversal attacks
-		if base64:
-			self.path = self.path.split(encode_encrypt_url)[-1]
-			print(Fore.YELLOW + f'[+] Decoding and Decrypting URL: {self.path}' + Style.RESET_ALL)
-			self.path=(self.encrypt_wrapper(base64.b64decode(self.path)).decode('utf-8'))
-			
-			print(Fore.YELLOW + f'[+] Decrypted path: {self.path}' + Style.RESET_ALL)
-		for forbidden in forbidden_chars:
-			if forbidden in self.path:
-				print(Fore.RED + f"Forbidden character {forbidden} in {self.path}" + Style.RESET_ALL) 
+		# returns None if checks are not passed
+		sanitized_path = self.path
+		if encoded:
+			try:
+				print(f'[+] Decoding and Decrypting URL: {sanitized_path}')
+				encrypted_part = sanitized_path.split(encode_encrypt_url)[-1]
+				decoded_path = base64.b64decode(encrypted_part)
+				sanitized_path = self.encrypt_wrapper(decoded_path).decode('utf-8')
+				print(f'[+] Decrypted path: {sanitized_path}')
+			except Exception as e:
+				print(f"Error processing encoded path: {e}")
 				return None
-		return self.path.split('/')[-1] #returns the file requested
+		else:
+			print(f'[+] URL is not encoded: {sanitized_path}')
+			return None
+
+		for forbidden in forbidden_chars:
+			if forbidden in sanitized_path:
+				print(f"Forbidden character {forbidden} in {sanitized_path}") 
+				return None
+                
+		return sanitized_path.split('/')[-1]
 
 	def do_HEAD(self):
 		self.send_response(200)
@@ -135,78 +145,54 @@ class CustomServerHandler(http.server.BaseHTTPRequestHandler):
 
 	def do_GET(self):
 		self.parsed_options=options
-		key = self.server.get_auth_key()
+		if self.path.startswith(encode_encrypt_url):  
+			filename = self.sanitize_path()  
+			if not filename:
+				# Forbidden character identified - dropping request
+				self.send_response(404)
+				self.end_headers()
+				return
+		else:
+			filename = self.sanitize_path(encoded=False)
+			if not filename:
+				self.send_response(404)
+				self.end_headers()
+				return
 
-		''' Present frontpage with user authentication. '''
-		if self.headers.get('Authorization') == None:
-			self.do_AUTHHEAD()
+		# Determine the file's intended directory based on its name or extension
+		ext = filename.split('.')[-1]
+		if '---' in filename:
+			parts = filename.split('---')
+			subfolder, filename = parts[0], parts[-1]
+			if subfolder == 'delivery_files':
+				path = 'Delivery_files'  
+			elif ext == 'zip':
+				path = os.path.join('Dependencies', subfolder) 
+			else:
+				path = '.'  
+		elif ext == 'py':
+			path = 'Modules'  
+		else:
+			path = '.'
 
-			response = {
-				'success': False,
-				'error': 'No auth header received'
-			}
-		
-			self.wfile.write(bytes(json.dumps(response), 'utf-8'))
+		file_path = os.path.join(path, filename)
 
-		elif self.headers.get('Authorization') == 'Basic ' + str(key):
+		try:
+			with open(file_path, 'rb') as file_get:
+				content = file_get.read()
+                
+			content = self.encrypt_wrapper(content)
+			
 			self.send_response(200)
 			self.end_headers()
-
-			getvars = self._parse_GET()
-
-			response = {
-				'path': self.path,
-				'get_vars': str(getvars)
-			}
+			self.wfile.write(content)
+			print(f'[+] Delivered encrypted file {file_path}')
 			
-			
-			if self.path.startswith(encode_encrypt_url):
-				# decode and decrypt the URL if it is base64 encoded
-				filename = self.sanitize_path()
-				if not filename:
-					# forbidden character identified - dropping request
-					return
-			else:
-				# no encoding and no encryption in the URL
-				filename = sanitize_path(encoded=False)
-			
-			ext = filename.split('.')[-1]
-			
-			if '---' in filename:
-				subfolder= filename.split('---')[0]
-				filename = filename.split('---')[-1]
-				if subfolder == 'delivery_files':
-					path = 'Delivery_files'
-				if ext == 'zip':
-					path = 'Dependencies/' + subfolder
-			elif ext == 'py':
-				path = 'Modules'
-			else: 
-				path = '.'
-
-			file_path = os.path.join(path, filename)
-			
-			try:
-				with open(file_path, 'rb') as file_get:
-					content = file_get.read()
+		except Exception as e:
+			print(e)
+			self.send_response(500)
+			self.end_headers()
 				
-				content= self.encrypt_wrapper(content)									
-			   
-				self.wfile.write(content)
-				print(Fore.YELLOW + f'[+] Delivered encrypted file {file_path}' + Style.RESET_ALL)
-				
-			except Exception as e:
-				print(e)
-			
-		else:
-			self.do_AUTHHEAD()
-
-			response = {
-				'success': False,
-				'error': 'Invalid credentials'
-			}
-
-			
 	def do_POST(self):
 		key = self.server.get_auth_key()
 
@@ -297,8 +283,8 @@ if __name__ == '__main__':
 
 	parser.add_argument('-server', '--server',  required='-generate' in sys.argv, type=str, help='server that will be set in modules Pyramid config')
 	parser.add_argument('-p', '--port', type=int, help='Port on which the server will be listening', default=80)
-	parser.add_argument('-u', '--user', help='HTTP Basic Auth username',required=True)
-	parser.add_argument('-pass', '--password', help='HTTP Basic Auth password',required=True)
+	
+	
 	parser.add_argument('-ssl', action='store_true', help='Enable SSL encryption with default SSL key and certificate')
 	parser.add_argument('-setcradle', type=str, help='Module to be fetched by cradle.py')
 	parser.add_argument('-sslkey', help=f'SSL key file full path (default: {default_sslkey})', default=default_sslkey)
@@ -312,9 +298,6 @@ if __name__ == '__main__':
 	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 80 -enc chacha20 -passenc superpass -generate -server 192.168.1.1 -setcradle bh.py'
 	parser.epilog = example_usage
 
-	
-
-
 	if len(sys.argv)==1:
 		parser.print_help()
 		sys.exit(1)
@@ -323,18 +306,12 @@ if __name__ == '__main__':
 	
 	pyramid_params = {'pyramid_server=':'\'' + (options.server if options.server else '') + '\'',
 					  'pyramid_port=':'\'' + str(options.port) + '\'',
-					  'pyramid_user=':'\'' + options.user + '\'',
-					  'pyramid_pass=':'\'' + options.password + '\'',
 					  'encryption=':'\'' + options.enc + '\'',
 					  'encryptionpass=':'\'' + options.passenc + '\'',
 					  'chacha20IV=':str(iv),
 					  'pyramid_http=':'\'' + ('https' if options.ssl else 'http') + '\'',
 					  'encode_encrypt_url=': '\'' + encode_encrypt_url + '\''
 					   }
-					  
-					  
-	
-	
 	
 	# Check that sslkey file exists
 	if(options.ssl):
@@ -372,7 +349,6 @@ if __name__ == '__main__':
 		if not options.sslcert:
 			options.sslcert = default_sslcert
 
-
 	
 	def signal_handler(signal, frame):
 		print(Fore.YELLOW +'\nExiting server...'+ Style.RESET_ALL)
@@ -382,15 +358,14 @@ if __name__ == '__main__':
 
 
 	print(Fore.GREEN + """
-__________                              .__    .___
-\______   \___.__.____________    _____ |__| __| _/
- |     ___<   |  |\_  __ \__  \  /     \|  |/ __ | 
- |    |    \___  | |  | \// __ \|  Y Y  \  / /_/ | 
- |____|    / ____| |__|  (____  /__|_|  /__\____ | 
-           \/                 \/      \/        \/
+__________							  .__	.___
+\______   \___.__.____________	_____ |__| __| _/
+ |	 ___<   |  |\_  __ \__  \  /	 \|  |/ __ | 
+ |	|	\___  | |  | \// __ \|  Y Y  \  / /_/ | 
+ |____|	/ ____| |__|  (____  /__|_|  /__\____ | 
+		   \/				 \/	  \/		\/
  HTTP/S server main features:
  - Auto-generation of server config for modules and cradle (use -generate switch)
- - Basic Authentication
  - encryption of delivered files (chacha, xor)
  - URL decoding and decryption
  
@@ -406,10 +381,10 @@ __________                              .__    .___
 		pyramid_params.update({'pyramid_module=': '\'' + options.setcradle + '\'' if options.setcradle else '\'\''})
 		replace_in_file(pyramid_params,'cradle.py', agent_dir)
 		print_encoded_cradle()
-	    
+		
 	print(Fore.YELLOW + "[+] Pyramid HTTP Server listening on port "+ Style.RESET_ALL,options.port)
 	print(Fore.YELLOW + "[+] MIND YOUR OPSEC! Serving Pyramid files from folder "+ Style.RESET_ALL,options.filesfolder)
-	print(Fore.YELLOW + "[+] User allowed to fetch files: "+ Style.RESET_ALL, options.user)
+	
 
 	if options.ssl:
 		print(Fore.YELLOW + "[+] HTTPS Server starting "+ Style.RESET_ALL)
@@ -421,6 +396,5 @@ __________                              .__    .___
 		print(Fore.YELLOW + "[+] HTTP server starting "+ Style.RESET_ALL)
 		server = CustomHTTPServer(('', int(options.port)))
 
-	server.set_auth(options.user, options.password)
 	signal.signal(signal.SIGINT, signal_handler)
 	server.serve_forever()
