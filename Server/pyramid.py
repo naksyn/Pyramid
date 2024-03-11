@@ -76,9 +76,9 @@ def substitute_parameters(pyramid_params):
 	
 def print_encoded_cradle():
 	
-	cradle = os.path.dirname(os.getcwd()) + '/Agent/cradle.py'
+	cradle = os.path.dirname(os.getcwd()) + '/Agent/' + options.setcradle
 	string = "import base64\nimport zlib\nencoded_script=\""
-	print(Fore.YELLOW + "[+] printing b64encoded(zipped(cradle.py)) for scriptless execution on terminal:" + Style.RESET_ALL)
+	print(Fore.YELLOW + "[+] printing b64encoded(zipped(cradle)) for scriptless execution on terminal:" + Style.RESET_ALL)
 	try:
 		with open(cradle, 'rb') as f:
 			string += base64.b64encode(zlib.compress(f.read(), level=9)).decode()
@@ -90,8 +90,6 @@ def print_encoded_cradle():
 	except Exception as e:
 		print(Fore.RED + "[-] An error occurred: " + str(e) + Style.RESET_ALL)
 				
-				
-	
 
 
 class CustomServerHandler(http.server.BaseHTTPRequestHandler):
@@ -124,11 +122,14 @@ class CustomServerHandler(http.server.BaseHTTPRequestHandler):
 			print(f'[+] URL is not encoded: {sanitized_path}')
 			return None
 
+		# Check for forbidden characters
+		forbidden_chars = ['..', '<', '>', ':'] 
 		for forbidden in forbidden_chars:
 			if forbidden in sanitized_path:
 				print(f"Forbidden character {forbidden} in {sanitized_path}") 
 				return None
-                
+
+		
 		return sanitized_path.split('/')[-1]
 
 	def do_HEAD(self):
@@ -139,16 +140,38 @@ class CustomServerHandler(http.server.BaseHTTPRequestHandler):
 	def do_AUTHHEAD(self):
 		self.send_response(401)
 		self.send_header(
-			'WWW-Authenticate', 'Basic realm="Demo Realm"')
+			'WWW-Authenticate', 'Basic realm="py"')
 		self.send_header('Content-type', 'application/json')
 		self.end_headers()
 
 	def do_GET(self):
 		self.parsed_options=options
-		if self.path.startswith(encode_encrypt_url):  
+		key = self.server.get_auth_key()
+		if options.user:
+			if self.headers.get('Authorization') == None:
+				self.do_AUTHHEAD()
+				response = {
+					'success': False,
+					'error': 'No auth header received'
+				}
+				self.wfile.write(bytes(json.dumps(response), 'utf-8'))
+			
+			elif self.headers.get('Authorization') == 'Basic ' + str(key):
+				### we don't send response here otherwise it'll break the encryption of the payload on the receiving end
+				getvars = self._parse_GET()
+
+				response = {
+					'path': self.path,
+					'get_vars': str(getvars)
+				}
+				
+				### user is authenticated
+				
+		if self.path.startswith(encode_encrypt_url):
+			
 			filename = self.sanitize_path()  
 			if not filename:
-				# Forbidden character identified - dropping request
+				
 				self.send_response(404)
 				self.end_headers()
 				return
@@ -159,28 +182,27 @@ class CustomServerHandler(http.server.BaseHTTPRequestHandler):
 				self.end_headers()
 				return
 
-		# Determine the file's intended directory based on its name or extension
 		ext = filename.split('.')[-1]
 		if '---' in filename:
 			parts = filename.split('---')
 			subfolder, filename = parts[0], parts[-1]
 			if subfolder == 'delivery_files':
-				path = 'Delivery_files'  
+				path = 'Delivery_files'
 			elif ext == 'zip':
-				path = os.path.join('Dependencies', subfolder) 
+				path = os.path.join('Dependencies', subfolder)
 			else:
 				path = '.'  
 		elif ext == 'py':
-			path = 'Modules'  
+			path = 'Modules' 
 		else:
-			path = '.'
+			path = '.' 
 
 		file_path = os.path.join(path, filename)
 
 		try:
 			with open(file_path, 'rb') as file_get:
 				content = file_get.read()
-                
+
 			content = self.encrypt_wrapper(content)
 			
 			self.send_response(200)
@@ -192,7 +214,8 @@ class CustomServerHandler(http.server.BaseHTTPRequestHandler):
 			print(e)
 			self.send_response(500)
 			self.end_headers()
-				
+
+			
 	def do_POST(self):
 		key = self.server.get_auth_key()
 
@@ -276,17 +299,20 @@ class CustomHTTPServer(http.server.HTTPServer):
 if __name__ == '__main__':
 	
 	parser = argparse.ArgumentParser(description='Serve Pyramid files over HTTP/S and provide basic authentication.')
+	parser.add_argument('-u', '--user', type=str, help='Username for HTTP basic authentication (optional)')
+	parser.add_argument('-pass', '--password', type=str, help='Password for HTTP basic authentication (optional)')
 
 	default_filesfolder = os.getcwd() + "/"
 	default_sslkey = os.path.join(default_filesfolder, 'key.pem')
 	default_sslcert = os.path.join(default_filesfolder, 'cert.pem')
 
 	parser.add_argument('-server', '--server',  required='-generate' in sys.argv, type=str, help='server that will be set in modules Pyramid config')
-	parser.add_argument('-p', '--port', type=int, help='Port on which the server will be listening', default=80)
+	parser.add_argument('-p', '--port', type=int, required=True, help='Port on which the server will be listening', default=80)
 	
 	
 	parser.add_argument('-ssl', action='store_true', help='Enable SSL encryption with default SSL key and certificate')
-	parser.add_argument('-setcradle', type=str, help='Module to be fetched by cradle.py')
+	parser.add_argument('-setmod', type=str, required=True, help='Module to be fetched by the chosen cradle')
+	parser.add_argument('-setcradle', type=str, required=True, help='cradle to be used')
 	parser.add_argument('-sslkey', help=f'SSL key file full path (default: {default_sslkey})', default=default_sslkey)
 	parser.add_argument('-sslcert', help=f'SSL certificate file full path (default: {default_sslcert})', default=default_sslcert)
 	parser.add_argument('-filesfolder', help=f'Pyramid Server folder (default: {default_filesfolder})', default=default_filesfolder)
@@ -295,8 +321,11 @@ if __name__ == '__main__':
 	group = parser.add_mutually_exclusive_group(required='-enc' in sys.argv)
 	group.add_argument('-passenc', help='Encryption password')
 	
-	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 80 -enc chacha20 -passenc superpass -generate -server 192.168.1.1 -setcradle bh.py'
+	example_usage = 'Example: python3 pyramid.py -u testuser -pass testpass -p 80 -enc chacha20 -passenc superpass -generate -server 192.168.1.1 -setcradle cradle.py -setmod pythonmemorymodule.py'
 	parser.epilog = example_usage
+
+	
+
 
 	if len(sys.argv)==1:
 		parser.print_help()
@@ -306,12 +335,18 @@ if __name__ == '__main__':
 	
 	pyramid_params = {'pyramid_server=':'\'' + (options.server if options.server else '') + '\'',
 					  'pyramid_port=':'\'' + str(options.port) + '\'',
+					  'pyramid_user=':'\'' + (options.user if options.user else '') + '\'',
+					  'pyramid_pass=':'\'' + (options.password if options.password else '') + '\'',
 					  'encryption=':'\'' + options.enc + '\'',
 					  'encryptionpass=':'\'' + options.passenc + '\'',
 					  'chacha20IV=':str(iv),
 					  'pyramid_http=':'\'' + ('https' if options.ssl else 'http') + '\'',
 					  'encode_encrypt_url=': '\'' + encode_encrypt_url + '\''
 					   }
+					  
+					  
+	
+	
 	
 	# Check that sslkey file exists
 	if(options.ssl):
@@ -349,6 +384,7 @@ if __name__ == '__main__':
 		if not options.sslcert:
 			options.sslcert = default_sslcert
 
+
 	
 	def signal_handler(signal, frame):
 		print(Fore.YELLOW +'\nExiting server...'+ Style.RESET_ALL)
@@ -366,6 +402,7 @@ __________							  .__	.___
 		   \/				 \/	  \/		\/
  HTTP/S server main features:
  - Auto-generation of server config for modules and cradle (use -generate switch)
+ - Basic Authentication
  - encryption of delivered files (chacha, xor)
  - URL decoding and decryption
  
@@ -378,13 +415,13 @@ __________							  .__	.___
 		print(Fore.YELLOW + "[+] Auto-generating Pyramid config for modules and agents" + Style.RESET_ALL)
 		substitute_parameters(pyramid_params)
 		agent_dir = os.path.dirname(os.getcwd()) + '/Agent'
-		pyramid_params.update({'pyramid_module=': '\'' + options.setcradle + '\'' if options.setcradle else '\'\''})
-		replace_in_file(pyramid_params,'cradle.py', agent_dir)
+		pyramid_params.update({'pyramid_module=': '\'' + options.setmod + '\'' if options.setcradle else '\'\''})
+		replace_in_file(pyramid_params,options.setcradle, agent_dir)
 		print_encoded_cradle()
 		
 	print(Fore.YELLOW + "[+] Pyramid HTTP Server listening on port "+ Style.RESET_ALL,options.port)
 	print(Fore.YELLOW + "[+] MIND YOUR OPSEC! Serving Pyramid files from folder "+ Style.RESET_ALL,options.filesfolder)
-	
+	print(Fore.YELLOW + "[+] User allowed to fetch files: "+ Style.RESET_ALL, options.user)
 
 	if options.ssl:
 		print(Fore.YELLOW + "[+] HTTPS Server starting "+ Style.RESET_ALL)
@@ -396,5 +433,6 @@ __________							  .__	.___
 		print(Fore.YELLOW + "[+] HTTP server starting "+ Style.RESET_ALL)
 		server = CustomHTTPServer(('', int(options.port)))
 
+	server.set_auth(options.user, options.password)
 	signal.signal(signal.SIGINT, signal_handler)
 	server.serve_forever()
