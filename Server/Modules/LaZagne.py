@@ -252,7 +252,7 @@ class CFinder(object):
 
 	def _get_source(self, fullname):
 		"""Get the source code for the requested module"""
-		submodule, is_package, relpath = self._get_info(self.repoName, fullname)
+		submodule, is_package, relpath = self._get_info(fullname)
 		fullpath = '%s/%s' % (self.repoName, relpath)
 		if relpath in self._source_cache:
 			source = self._source_cache[relpath]
@@ -299,11 +299,11 @@ class CFinder(object):
 
 	def is_package(self, fullname):
 		"""Return if the module is a package"""
-		submodule, is_package, relpath = self._get_info(self.repoName, fullname)
+		submodule, is_package, relpath = self._get_info(fullname)
 		return is_package
 
 	def get_code(self, fullname):
-		submodule, is_package, fullpath, source = self._get_source(self.repoName, fullname)
+		submodule, is_package, fullpath, source = self._get_source(fullname)
 		return compile(source, fullpath, 'exec')
 
 def install_hook(repoName):
