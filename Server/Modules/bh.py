@@ -218,7 +218,7 @@ class CFinder(object):
 		self.repoName = repoName
 		self._source_cache = {}
 
-	def _get_info(self, repoName, fullname):
+	def _get_info(self, fullname):
 		"""Search for the respective package or module in the zipfile object"""
 		parts = fullname.split('.')
 		submodule = parts[-1]
@@ -229,26 +229,26 @@ class CFinder(object):
 		for suffix, is_package in _search_order:
 			relpath = modulepath + suffix
 			try:
-				moduleRepo[repoName].getinfo(relpath)
+				moduleRepo[self.repoName].getinfo(relpath)
 			except KeyError:
 				pass
 			else:
 				return submodule, is_package, relpath
 
 		#Error out if we can find the module/package
-		msg = ('Unable to locate module %s in the %s repo' % (submodule, repoName))
+		msg = ('Unable to locate module %s in the %s repo' % (submodule, self.repoName))
 		raise ZipImportError(msg)
 
-	def _get_source(self, repoName, fullname):
+	def _get_source(self, fullname):
 		"""Get the source code for the requested module"""
-		submodule, is_package, relpath = self._get_info(repoName, fullname)
-		fullpath = '%s/%s' % (repoName, relpath)
+		submodule, is_package, relpath = self._get_info(self.repoName, fullname)
+		fullpath = '%s/%s' % (self.repoName, relpath)
 		if relpath in self._source_cache:
 			source = self._source_cache[relpath]
 			return submodule, is_package, fullpath, source
 		try:
 			### added .decode
-			source =  moduleRepo[repoName].read(relpath).decode()
+			source =  moduleRepo[self.repoName].read(relpath).decode()
 			#print(source)
 			source = source.replace('\r\n', '\n')
 			source = source.replace('\r', '\n')
@@ -257,27 +257,23 @@ class CFinder(object):
 		except:
 			raise ZipImportError("Unable to obtain source for module %s" % (fullpath))
 
-	def find_module(self, fullname, path=None):
-
+	def find_spec(self, fullname, path=None, target=None):
 		try:
-			submodule, is_package, relpath = self._get_info(self.repoName, fullname)
+			submodule, is_package, relpath = self._get_info(fullname)
 		except ImportError:
 			return None
 		else:
-			return self
+			return importlib.util.spec_from_loader(fullname, self)
 
-	def load_module(self, fullname):
-		submodule, is_package, fullpath, source = self._get_source(self.repoName, fullname)
+	def create_module(self, spec):
+		return None
+
+	def exec_module(self, module):
+		submodule, is_package, fullpath, source = self._get_source(module.__name__)
 		code = compile(source, fullpath, 'exec')
-		spec = importlib.util.spec_from_loader(fullname, loader=None)
-		mod = sys.modules.setdefault(fullname, importlib.util.module_from_spec(spec))
-		mod.__loader__ = self
-		mod.__file__ = fullpath
-		mod.__name__ = fullname
 		if is_package:
-			mod.__path__ = [os.path.dirname(mod.__file__)]
-		exec(code,mod.__dict__)
-		return mod
+			module.__path__ = [os.path.dirname(fullpath)]
+		exec(code, module.__dict__)
 
 	def get_data(self, fullpath):
 
