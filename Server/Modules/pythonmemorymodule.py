@@ -382,6 +382,7 @@ dll = pythonmemorymodule.MemoryModule(data=buf, debug=True, command=command)
 if not (inject_exe):
     print("[*] Calling " + dll_procedure + " procedure.")
     startDll = dll.get_proc_addr(dll_procedure)
+    startDll()
 
 # this keeps python.exe opened while dll is executing
 print("[*] Press Ctrl+C to end loop - Warning! this will end your routine and free the dll loaded.")
