@@ -2,7 +2,8 @@
 
 # Pyramid
 <p align="center">
-  <img width="250" alt="immagine" src="https://github.com/naksyn/Pyramid/assets/59816245/c4f25419-b350-42d3-86ad-136f3873edb8">
+  <img width="250" alt="immagine" src="https://github.com/naksyn/Pyramid/assets/59816245/b4e1e468-d7e9-4580-b6bc-8b589fda3dd7"
+">
 </p>
 
 # What is it
