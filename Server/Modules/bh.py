@@ -316,7 +316,7 @@ def hook_routine(fileName,zip_web):
 zip_list=['bloodhound---setuptools', 'bloodhound---pkg_resources', 'bloodhound---jaraco', 'bloodhound---_distutils_hack', 'bloodhound---bloodhound', 'bloodhound---distutils',\
  'bloodhound---configparser', 'bloodhound---future', 'bloodhound---chardet', 'bloodhound---flask', 'bloodhound---ldap3', 'bloodhound---ldapdomaindump', \
  'bloodhound---pyasn1', 'bloodhound---OpenSSL','bloodhound---pyreadline', 'bloodhound---six','bloodhound---markupsafe', 'bloodhound---werkzeug','bloodhound---jinja2',\
- 'bloodhound---click', 'bloodhound---itsdangerous', 'bloodhound---dns', 'bloodhound---cryptography', 'bloodhound---json', 'bloodhound---impacket' ]
+ 'bloodhound---click', 'bloodhound---itsdangerous', 'bloodhound---dns', 'bloodhound---cryptography', 'bloodhound---json', 'bloodhound---impacket', 'bloodhound---winkerberos' ]
 	
 for zip_name in zip_list:
     try:
